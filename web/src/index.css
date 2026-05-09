@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(249, 115, 22, 0.06), transparent 60%),
+      radial-gradient(900px 500px at 110% 110%, rgba(249, 115, 22, 0.04), transparent 60%),
+      #08080a;
+  }
+}
+
+@layer components {
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .pill-on {
+    @apply pill bg-flame-500/15 text-flame-300 ring-1 ring-flame-500/40;
+  }
+  .pill-off {
+    @apply pill bg-ink-700 text-ink-400 ring-1 ring-ink-600;
+  }
+  .card {
+    @apply relative rounded-xl border border-ink-700 bg-ink-900/80 backdrop-blur-sm
+           p-5 hover:border-flame-500/40 transition-colors;
+  }
+  .stat-label {
+    @apply text-[11px] uppercase tracking-widest text-ink-400;
+  }
+  .stat-value {
+    @apply font-mono text-lg text-flame-100;
+  }
+  .stat-sub {
+    @apply font-mono text-xs text-ink-400;
+  }
+}
+
+/* Tiny LED dot animation. */
+@keyframes pulse-led {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.55); }
+  50%      { box-shadow: 0 0 0 4px rgba(249, 115, 22, 0); }
+}
+.led-on  { background: #fb923c; animation: pulse-led 2s infinite; }
+.led-off { background: #5b5867; }

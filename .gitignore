@@ -1,0 +1,22 @@
+# Build artifacts
+/bin/
+/web/dist/assets/
+/web/dist/*.js
+/web/dist/*.js.map
+/web/dist/*.css
+/web/dist/*.css.map
+
+# Node
+/web/node_modules/
+
+# Local config / runtime caches
+.env
+/tokens.json
+/autocert-cache/
+/acme-cache/
+
+# Editor / OS noise
+.DS_Store
+*.swp
+.idea/
+.vscode/
