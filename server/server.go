@@ -206,6 +206,13 @@ func (s *Server) buildHTTPHandler(pub http.Handler) http.Handler {
 func (s *Server) httpsRedirector(fallback http.Handler) http.Handler {
 	tlsPort := portFromAddr(s.cfg.PublicTLSAddr)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// /health must answer on plain HTTP for monitoring probes that don't
+		// speak TLS. Pass through to the public handler.
+		if r.URL.Path == "/health" {
+			fallback.ServeHTTP(w, r)
+			return
+		}
+
 		host := stripPort(r.Host)
 		base := strings.ToLower(s.cfg.BaseDomain)
 
@@ -225,7 +232,6 @@ func (s *Server) httpsRedirector(fallback http.Handler) http.Handler {
 		}
 		target += r.URL.RequestURI()
 		http.Redirect(w, r, target, http.StatusMovedPermanently)
-		_ = fallback // kept in signature for layering symmetry
 	})
 }
 
@@ -240,6 +246,15 @@ func portFromAddr(addr string) string {
 // dashboard or the right router-client.
 func (s *Server) publicHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// /health is auth-free and host-agnostic — k8s/loadbalancer probes
+		// often dial the IP directly with an arbitrary Host header. This
+		// shadows any service-level /health on a sub-host; downstream services
+		// should expose their own health on a different path.
+		if r.URL.Path == "/health" {
+			s.serveHealth(w, r)
+			return
+		}
+
 		host := stripPort(r.Host)
 		base := strings.ToLower(s.cfg.BaseDomain)
 		if strings.EqualFold(host, base) || strings.EqualFold(host, "www."+base) {
@@ -365,6 +380,20 @@ func (s *Server) handleControl(conn net.Conn) {
 	<-sess.Closed()
 	s.registry.Unregister(sess)
 	log.Printf("control: %s disconnected service=%q", conn.RemoteAddr(), service)
+}
+
+// serveHealth answers liveness/readiness probes. 200 "ok\n" is the normal
+// case; 500 fires when the token file failed its last reload — operator-
+// actionable degraded state where new clients can't authenticate.
+func (s *Server) serveHealth(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	if _, _, lastErr := s.tokens.Snapshot(); lastErr != "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = fmt.Fprintf(w, "fail: tokens: %s\n", lastErr)
+		return
+	}
+	_, _ = w.Write([]byte("ok\n"))
 }
 
 func stripPort(host string) string {

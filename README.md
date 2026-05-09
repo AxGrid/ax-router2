@@ -194,6 +194,21 @@ If `AXR_ADMIN_USER` and `AXR_ADMIN_PASS` are both set, all admin endpoints
 (including the dashboard and `/__router/api/state` JSON) are gated by
 basic auth.
 
+## Health check
+
+`GET /health` is auth-free, host-agnostic, and answers on plain HTTP even
+when `AXR_HTTPS_REDIRECT=true` — so k8s liveness probes, load balancers,
+and `curl http://<ip>/health` all work without a Host header rewrite.
+
+* `200 OK` body `ok` — server is responsive.
+* `500 Internal Server Error` body `fail: tokens: <error>` — the most
+  recent reload of `AXR_TOKENS_FILE` failed, so new clients can't
+  authenticate. Existing connections continue to serve.
+
+This shadows any service-level `/health` on a sub-host. Downstream
+services should expose their own health on a different path (e.g.
+`/healthz`, `/_status`) if you want both reachable through the router.
+
 ## Per-service certificate pre-warm
 
 When `AXR_TLS_MODE=autocert` (or `dns`), each time a router-client registers,

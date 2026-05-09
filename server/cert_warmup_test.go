@@ -196,6 +196,58 @@ func TestNoRedirectByDefault(t *testing.T) {
 	}
 }
 
+func TestHealthOK(t *testing.T) {
+	srv := newServerForTest(t, "router.test", "tok", "*")
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/health", nil)
+	req.Host = "anything.example" // works for any Host
+	srv.publicHandler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if body := rec.Body.String(); body != "ok\n" {
+		t.Fatalf("body = %q, want %q", body, "ok\n")
+	}
+}
+
+func TestHealthFailureWhenTokensReloadBroken(t *testing.T) {
+	srv := newServerForTest(t, "router.test", "tok", "*")
+	srv.tokens.lastErr = "open tokens.json: no such file"
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/health", nil)
+	srv.publicHandler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "tokens.json") {
+		t.Fatalf("expected error detail in body, got %q", rec.Body.String())
+	}
+}
+
+func TestHealthBypassesHTTPSRedirect(t *testing.T) {
+	srv := newServerForTest(t, "router.test", "tok", "*")
+	srv.cfg.HTTPSRedirect = true
+	srv.cfg.PublicTLSAddr = ":8443"
+	srv.tls = &tls.Config{} //nolint:gosec // test fixture
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/health", nil)
+	req.Host = "foo.router.test"
+	srv.buildHTTPHandler(srv.publicHandler()).ServeHTTP(rec, req)
+
+	if rec.Code == http.StatusMovedPermanently {
+		t.Fatalf("/health must not be redirected to HTTPS, got 301 → %s",
+			rec.Result().Header.Get("Location"))
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
 // newServerForTest builds a *Server suitable for unit tests of the public
 // handler. It does not start any listeners.
 func newServerForTest(t *testing.T, base, token, service string) *Server {
