@@ -1,0 +1,80 @@
+/* Ax Styler design tokens — sourced verbatim from the ax-styler skill.
+ * Toggle theme by setting data-theme="light" | "dark" on <html>.
+ * This dashboard is dark-only; the light block stays for token symmetry. */
+
+:root,
+[data-theme="light"] {
+  --brand-50:  #FFF4EB; --brand-100: #FFE4D0; --brand-200: #FFC59E;
+  --brand-300: #FFA66C; --brand-400: #FF8A40; --brand-500: #FF6B1A;
+  --brand-600: #E85610; --brand-700: #B8430C; --brand-800: #8A3208; --brand-900: #5C2105;
+
+  --bg: #FFFFFF; --bg-elevated: #FFFFFF;
+  --surface: #F7F7F7; --surface-2: #F0F0F0; --surface-hover: #ECECEC;
+
+  --fg: #1A1A1A; --fg-muted: #6B6B6B; --fg-subtle: #999999; --fg-on-brand: #FFFFFF;
+
+  --border: #E5E5E5; --border-strong: #D0D0D0;
+  --ring: color-mix(in oklab, var(--brand-500) 60%, transparent);
+
+  --accent: var(--brand-500); --accent-hover: var(--brand-600); --accent-active: var(--brand-700);
+  --accent-fg: #FFFFFF;
+
+  --success: #16A34A; --success-fg: #FFFFFF; --success-bg: #F0FDF4;
+  --warning: #D97706; --warning-fg: #FFFFFF; --warning-bg: #FEF3C7;
+  --danger:  #DC2626; --danger-fg:  #FFFFFF; --danger-bg:  #FEF2F2;
+  --info:    #2563EB; --info-fg:    #FFFFFF; --info-bg:    #EFF6FF;
+
+  --overlay: color-mix(in oklab, #000 35%, transparent);
+  --glass-bg: color-mix(in oklab, #FFFFFF 70%, transparent);
+  --glass-border: color-mix(in oklab, #000 8%, transparent);
+
+  --shadow-xs: 0 1px 2px 0 color-mix(in oklab, #000 5%, transparent);
+  --shadow-sm: 0 1px 3px 0 color-mix(in oklab, #000 8%, transparent),
+               0 1px 2px -1px color-mix(in oklab, #000 6%, transparent);
+  --shadow-md: 0 4px 12px -2px color-mix(in oklab, #000 10%, transparent),
+               0 2px 4px -2px color-mix(in oklab, #000 6%, transparent);
+  --shadow-lg: 0 12px 32px -8px color-mix(in oklab, #000 15%, transparent),
+               0 4px 12px -4px color-mix(in oklab, #000 8%, transparent);
+  --shadow-xl: 0 24px 48px -12px color-mix(in oklab, #000 22%, transparent),
+               0 8px 24px -8px color-mix(in oklab, #000 10%, transparent);
+  --shadow-glow: 0 0 0 4px color-mix(in oklab, var(--brand-500) 18%, transparent);
+
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+  --radius-xl: 20px; --radius-2xl: 28px; --radius-full: 9999px;
+
+  --font-sans: 'Inter', 'SF Pro Display', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+[data-theme="dark"] {
+  --brand-50:  #2A1505; --brand-100: #3D1F08; --brand-200: #5C2E0C;
+  --brand-300: #8A4513; --brand-400: #C26020; --brand-500: #FF7A2E;
+  --brand-600: #FF8F4D; --brand-700: #FFA66C; --brand-800: #FFC093; --brand-900: #FFE0CB;
+
+  --bg: #0A0A0A; --bg-elevated: #111111;
+  --surface: #161616; --surface-2: #1F1F1F; --surface-hover: #242424;
+
+  --fg: #FAFAFA; --fg-muted: #A1A1A1; --fg-subtle: #666666; --fg-on-brand: #0A0A0A;
+
+  --border: #262626; --border-strong: #383838;
+  --ring: color-mix(in oklab, var(--brand-500) 65%, transparent);
+
+  --accent: var(--brand-500); --accent-hover: var(--brand-600); --accent-active: var(--brand-700);
+  --accent-fg: #0A0A0A;
+
+  --success: #22C55E; --success-fg: #0A0A0A; --success-bg: color-mix(in oklab, #22C55E 12%, transparent);
+  --warning: #F59E0B; --warning-fg: #0A0A0A; --warning-bg: color-mix(in oklab, #F59E0B 14%, transparent);
+  --danger:  #EF4444; --danger-fg:  #FFFFFF; --danger-bg:  color-mix(in oklab, #EF4444 14%, transparent);
+  --info:    #3B82F6; --info-fg:    #FFFFFF; --info-bg:    color-mix(in oklab, #3B82F6 14%, transparent);
+
+  --overlay: color-mix(in oklab, #000 60%, transparent);
+  --glass-bg: color-mix(in oklab, #FFFFFF 6%, transparent);
+  --glass-border: color-mix(in oklab, #FFFFFF 10%, transparent);
+
+  --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.4);
+  --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.5), 0 1px 2px -1px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px -2px rgba(0,0,0,0.6), 0 2px 4px -2px rgba(0,0,0,0.4);
+  --shadow-lg: 0 12px 32px -8px rgba(0,0,0,0.7), 0 4px 12px -4px rgba(0,0,0,0.5);
+  --shadow-xl: 0 24px 48px -12px rgba(0,0,0,0.8), 0 8px 24px -8px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 0 4px color-mix(in oklab, var(--brand-500) 28%, transparent);
+}

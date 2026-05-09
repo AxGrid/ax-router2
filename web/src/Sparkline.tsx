@@ -1,10 +1,11 @@
 interface Props {
   values: number[];
   height?: number;
+  /** CSS color string. Defaults to the theme accent (var(--accent)). */
   color?: string;
 }
 
-export default function Sparkline({ values, height = 36, color = '#fb923c' }: Props) {
+export default function Sparkline({ values, height = 36, color = 'var(--accent)' }: Props) {
   const w = Math.max(values.length, 1);
   const max = Math.max(1, ...values);
   const points = values
@@ -15,17 +16,20 @@ export default function Sparkline({ values, height = 36, color = '#fb923c' }: Pr
     })
     .join(' ');
 
+  // Drive SVG paint via currentColor so a single CSS variable controls both
+  // the stroke and the fill gradient.
   return (
     <svg
       viewBox={`0 0 100 ${height}`}
       preserveAspectRatio="none"
       className="w-full"
       height={height}
+      style={{ color }}
     >
       <defs>
         <linearGradient id="sparkfill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
         </linearGradient>
       </defs>
       <polygon
@@ -35,7 +39,7 @@ export default function Sparkline({ values, height = 36, color = '#fb923c' }: Pr
       <polyline
         points={points}
         fill="none"
-        stroke={color}
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinejoin="round"
         strokeLinecap="round"

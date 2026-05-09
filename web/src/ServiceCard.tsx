@@ -31,11 +31,11 @@ export default function ServiceCard({ svc, now, cert }: Props) {
               }`}
               aria-hidden
             />
-            <h2 className="font-mono text-xl font-semibold tracking-tight text-flame-200">
+            <h2 className="font-mono text-xl font-semibold tracking-tight text-brand-800">
               {svc.service}
             </h2>
           </div>
-          <p className="mt-1 font-mono text-xs text-ink-400">
+          <p className="mt-1 font-mono text-xs text-fg-muted">
             {svc.connected
               ? svc.remote ?? 'connected'
               : 'offline'}
@@ -85,7 +85,7 @@ export default function ServiceCard({ svc, now, cert }: Props) {
             {totalRps} req · {formatBytes(totalBps)}
           </span>
         </div>
-        <div className="mt-1.5 rounded-lg bg-ink-800/60 p-2">
+        <div className="mt-1.5 rounded-md bg-surface-2 p-2">
           <Sparkline values={svc.rps60} />
         </div>
       </div>
@@ -97,7 +97,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="stat-label">{label}</div>
-      <div className="font-mono text-sm text-flame-100">{value}</div>
+      <div className="font-mono text-sm text-brand-900">{value}</div>
     </div>
   );
 }
@@ -115,18 +115,18 @@ function CertPill({ cert }: { cert: CertState }) {
   if (cert.status === 'ready') {
     return (
       <span className="pill-on">
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-flame-400" />
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-700" />
         cert · ready
       </span>
     );
   }
   if (cert.status === 'error') {
     return (
-      <span
-        className="pill bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/40"
-        title={cert.error}
-      >
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-400" />
+      <span className="pill-danger" title={cert.error}>
+        <span
+          className="inline-block h-1.5 w-1.5 rounded-full"
+          style={{ background: 'var(--danger)' }}
+        />
         cert · error
       </span>
     );

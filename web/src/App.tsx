@@ -62,7 +62,7 @@ export default function App() {
 
   if (!state) {
     return (
-      <div className="grid min-h-screen place-items-center text-flame-300">
+      <div className="grid min-h-screen place-items-center text-brand-700">
         <div className="font-mono text-sm tracking-wider opacity-70">loading…</div>
       </div>
     );
@@ -82,16 +82,16 @@ export default function App() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
-      <header className="mb-10 flex flex-wrap items-end justify-between gap-6 border-b border-ink-700 pb-6">
+      <header className="mb-10 flex flex-wrap items-end justify-between gap-6 border-b pb-6">
         <div>
           <div className="flex items-center gap-3">
             <Logo />
-            <h1 className="font-mono text-2xl font-bold tracking-tight text-flame-200">
+            <h1 className="font-mono text-2xl font-bold tracking-tight text-brand-800">
               ax-router
             </h1>
             <span className="pill-off">{state.baseDomain}</span>
           </div>
-          <p className="mt-2 font-mono text-xs text-ink-400">
+          <p className="mt-2 font-mono text-xs text-fg-muted">
             uptime {formatDurationShort(state.nowMs - state.startedAtMs)} ·{' '}
             {state.tokenCount} token{state.tokenCount === 1 ? '' : 's'}
             {state.tokensReloadedAtMs > 0 && (
@@ -100,7 +100,7 @@ export default function App() {
               </>
             )}
             {state.tokensError && (
-              <span className="ml-2 text-flame-400">
+              <span className="ml-2 text-danger">
                 · token error: {state.tokensError}
               </span>
             )}
@@ -110,10 +110,10 @@ export default function App() {
         <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest">
           <span
             className={`h-2 w-2 rounded-full ${
-              conn === 'open' ? 'led-on' : conn === 'connecting' ? 'bg-flame-400' : 'led-off'
+              conn === 'open' ? 'led-on' : conn === 'connecting' ? 'bg-brand-600' : 'led-off'
             }`}
           />
-          <span className="text-ink-400">live · {conn}</span>
+          <span className="text-fg-muted">live · {conn}</span>
         </div>
       </header>
 
@@ -127,8 +127,8 @@ export default function App() {
 
       {state.services.length === 0 ? (
         <div className="card grid place-items-center py-16 text-center">
-          <p className="font-mono text-flame-300">No services have ever connected.</p>
-          <p className="mt-2 max-w-md text-sm text-ink-400">
+          <p className="font-mono text-brand-700">No services have ever connected.</p>
+          <p className="mt-2 max-w-md text-sm text-fg-muted">
             Connect a router-client with a configured token; this dashboard updates in
             real time.
           </p>
@@ -146,7 +146,7 @@ export default function App() {
         </div>
       )}
 
-      <footer className="mt-12 text-center font-mono text-[11px] tracking-wider text-ink-400">
+      <footer className="mt-12 text-center font-mono text-[11px] tracking-wider text-fg-muted">
         ax-router2 · github.com/axgrid/ax-router2
       </footer>
     </div>
@@ -155,9 +155,9 @@ export default function App() {
 
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-ink-700 bg-ink-900/60 p-4">
+    <div className="rounded-lg border bg-surface p-4">
       <div className="stat-label">{label}</div>
-      <div className="mt-1 font-mono text-2xl text-flame-200">{value}</div>
+      <div className="mt-1 font-mono text-2xl text-brand-800">{value}</div>
       {sub && <div className="mt-0.5 stat-sub">{sub}</div>}
     </div>
   );
@@ -169,15 +169,15 @@ function Logo() {
       width="28"
       height="28"
       viewBox="0 0 32 32"
-      className="drop-shadow-[0_0_10px_rgba(249,115,22,0.45)]"
+      style={{ filter: 'drop-shadow(0 0 10px color-mix(in oklab, var(--accent) 45%, transparent))' }}
     >
       <defs>
         <linearGradient id="lg" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#fb923c" />
-          <stop offset="100%" stopColor="#c2410c" />
+          <stop offset="0%" stopColor="var(--brand-500)" />
+          <stop offset="100%" stopColor="var(--brand-700)" />
         </linearGradient>
       </defs>
-      <rect x="2" y="2" width="28" height="28" rx="7" fill="#0a0a0a" stroke="url(#lg)" strokeWidth="1.5" />
+      <rect x="2" y="2" width="28" height="28" rx="7" fill="var(--bg)" stroke="url(#lg)" strokeWidth="1.5" />
       <path
         d="M8 22 L14 10 L20 22 M10 18 L18 18"
         fill="none"
@@ -186,7 +186,7 @@ function Logo() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="24" cy="22" r="2" fill="#fb923c" />
+      <circle cx="24" cy="22" r="2" fill="var(--brand-500)" />
     </svg>
   );
 }
