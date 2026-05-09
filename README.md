@@ -285,6 +285,33 @@ domain, with a higher quota for the wildcard). On-demand issuance can hit
 this if you have many deep subdomains. For high-cardinality deployments
 prefer pre-issuing the wildcard and keeping subdomains one-level deep.
 
+## Building for Linux
+
+The Makefile cross-compiles to Linux from any host (no Docker / no
+toolchain swap — pure `GOOS`/`GOARCH`):
+
+```bash
+make build-linux              # both amd64 and arm64
+make build-linux-amd64        # x86_64 only
+make build-linux-arm64        # aarch64 only
+make build-all                # linux + darwin, four binaries
+make release VERSION=v0.1.0   # tarballs in dist/
+```
+
+Output:
+
+```
+bin/ax-router-linux-amd64        13 MB, statically linked, stripped
+bin/ax-router-linux-arm64        12 MB, statically linked, stripped
+dist/ax-router-linux-amd64-<ver>.tar.gz   binary + README + .env.example
+```
+
+`CGO_ENABLED=0` is set by default, so the binary runs on any glibc/musl
+Linux (Alpine, Debian, RHEL, scratch container, etc.) without runtime
+dependencies. The version string is baked in via `-ldflags="-X
+main.version=$(VERSION)"` (Git describe by default) and is printed by
+`./ax-router -version`.
+
 ## Tests
 
 ```bash
