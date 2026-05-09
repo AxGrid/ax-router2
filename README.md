@@ -1,5 +1,9 @@
 # ax-router2
 
+<p align="center">
+  <img src="screenshot/dashboard.png" alt="ax-router dashboard" width="720" />
+</p>
+
 A reverse HTTP/WebSocket router. Local services, anywhere on the internet,
 register **outbound** to a single public server and receive traffic for
 their assigned subdomain. No port-forwarding, no VPN, no per-service public
