@@ -15,16 +15,34 @@ import (
 	"github.com/axgrid/ax-router2/server"
 )
 
-// version is overridden at build time via -ldflags="-X main.version=...".
-var version = "dev"
+// Build identification — overridden at link time via:
+//
+//	-ldflags="-X main.version=$VERSION -X main.build=$BUILD -X main.commit=$COMMIT"
+var (
+	version = "dev"
+	build   = "0"
+	commit  = ""
+)
+
+// versionLine is the canonical one-liner shown by -version and at startup.
+//
+//	"ax-router 0.1.1 build 42 (a3f9c1) linux/amd64"
+func versionLine() string {
+	out := fmt.Sprintf("ax-router %s build %s", version, build)
+	if commit != "" {
+		out += fmt.Sprintf(" (%s)", commit)
+	}
+	out += fmt.Sprintf(" %s/%s", runtime.GOOS, runtime.GOARCH)
+	return out
+}
 
 func main() {
 	envFile := flag.String("env", ".env", "path to .env file (optional)")
-	showVersion := flag.Bool("version", false, "print version and exit")
+	showVersion := flag.Bool("version", false, "print version + build info and exit")
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("ax-router %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+		fmt.Println(versionLine())
 		return
 	}
 
@@ -43,7 +61,7 @@ func main() {
 		log.Fatalf("init: %v", err)
 	}
 
-	log.Printf("ax-router %s %s/%s", version, runtime.GOOS, runtime.GOARCH)
+	log.Print(versionLine())
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()

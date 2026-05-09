@@ -96,12 +96,8 @@ func (s *Server) Run(ctx context.Context) error {
 	s.track(pubLn)
 
 	pubMux := s.publicHandler()
-	httpHandler := http.Handler(pubMux)
-	if s.autocert != nil {
-		httpHandler = s.autocert.HTTPHandler(pubMux)
-	}
 	httpSrv := &http.Server{
-		Handler:           httpHandler,
+		Handler:           s.buildHTTPHandler(pubMux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	s.trackServer(httpSrv)
@@ -175,6 +171,69 @@ func (s *Server) shutdown() error {
 	}
 	s.registry.CloseAll()
 	return nil
+}
+
+// buildHTTPHandler wraps the public handler chain for the plain-HTTP listener.
+// Layering (outer → inner):
+//
+//  1. autocert.HTTPHandler — intercepts /.well-known/acme-challenge/* before
+//     anything else (only when autocert is active).
+//  2. httpsRedirector — 301s every request to its HTTPS counterpart, EXCEPT
+//     when the cert for that host is still being issued (in which case we
+//     show the loading page so the browser doesn't stall in TLS handshake).
+//     Only active when AXR_HTTPS_REDIRECT=true and a TLS listener is up.
+//  3. publicHandler — normal apex / proxy routing.
+func (s *Server) buildHTTPHandler(pub http.Handler) http.Handler {
+	redirectActive := s.cfg.HTTPSRedirect && s.cfg.PublicTLSAddr != "" && s.tls != nil
+	inner := pub
+	if redirectActive {
+		inner = s.httpsRedirector(pub)
+	}
+	if s.autocert != nil {
+		return s.autocert.HTTPHandler(inner)
+	}
+	return inner
+}
+
+// httpsRedirector returns a handler that 301s plain-HTTP requests to HTTPS,
+// preserving path + query + Host. ACME challenges are NOT seen here — they
+// are absorbed by autocert.HTTPHandler one layer up.
+//
+// Exception: if the host belongs to a service whose cert is still being
+// issued, we show the loading page on plain HTTP instead of redirecting.
+// Redirecting would land the user on HTTPS where the TLS handshake would
+// block until issuance completes (usually fine, but feels broken).
+func (s *Server) httpsRedirector(fallback http.Handler) http.Handler {
+	tlsPort := portFromAddr(s.cfg.PublicTLSAddr)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := stripPort(r.Host)
+		base := strings.ToLower(s.cfg.BaseDomain)
+
+		if s.certs != nil &&
+			!strings.EqualFold(host, base) &&
+			!strings.EqualFold(host, "www."+base) {
+			if service := extractService(host, base); service != "" {
+				if s.certs.renderIssuingPage(w, r, service+"."+base) {
+					return
+				}
+			}
+		}
+
+		target := "https://" + host
+		if tlsPort != "" && tlsPort != "443" {
+			target += ":" + tlsPort
+		}
+		target += r.URL.RequestURI()
+		http.Redirect(w, r, target, http.StatusMovedPermanently)
+		_ = fallback // kept in signature for layering symmetry
+	})
+}
+
+func portFromAddr(addr string) string {
+	if i := strings.LastIndexByte(addr, ':'); i >= 0 {
+		return addr[i+1:]
+	}
+	return ""
 }
 
 // publicHandler routes incoming HTTP(S) requests to either the apex admin

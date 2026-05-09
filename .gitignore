@@ -1,5 +1,6 @@
 # Build artifacts
 /bin/
+/.build-number
 /web/dist/assets/
 /web/dist/*.js
 /web/dist/*.js.map

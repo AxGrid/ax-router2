@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -104,6 +105,95 @@ func TestIssuerStatusLifecycle(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatal("issuer never transitioned to Ready")
+}
+
+func TestHTTPSRedirect(t *testing.T) {
+	srv := newServerForTest(t, "router.test", "tok", "*")
+	// Pretend a TLS listener will be active so the redirect kicks in.
+	srv.cfg.HTTPSRedirect = true
+	srv.cfg.PublicTLSAddr = ":8443"
+	srv.tls = &tls.Config{} //nolint:gosec // test fixture
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/some/path?q=1", nil)
+	req.Host = "foo.router.test"
+	srv.buildHTTPHandler(srv.publicHandler()).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMovedPermanently {
+		t.Fatalf("expected 301, got %d", rec.Code)
+	}
+	loc := rec.Result().Header.Get("Location")
+	want := "https://foo.router.test:8443/some/path?q=1"
+	if loc != want {
+		t.Fatalf("Location = %q, want %q", loc, want)
+	}
+}
+
+func TestHTTPSRedirectStandardPort(t *testing.T) {
+	srv := newServerForTest(t, "router.test", "tok", "*")
+	srv.cfg.HTTPSRedirect = true
+	srv.cfg.PublicTLSAddr = ":443"
+	srv.tls = &tls.Config{} //nolint:gosec // test fixture
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/x", nil)
+	req.Host = "foo.router.test"
+	srv.buildHTTPHandler(srv.publicHandler()).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMovedPermanently {
+		t.Fatalf("expected 301, got %d", rec.Code)
+	}
+	loc := rec.Result().Header.Get("Location")
+	if loc != "https://foo.router.test/x" {
+		t.Fatalf("Location = %q (port 443 should be omitted)", loc)
+	}
+}
+
+func TestHTTPSRedirectShowsIssuingPage(t *testing.T) {
+	srv := newServerForTest(t, "router.test", "tok", "*")
+	srv.cfg.HTTPSRedirect = true
+	srv.cfg.PublicTLSAddr = ":8443"
+	srv.tls = &tls.Config{} //nolint:gosec // test fixture
+	srv.certs = &certIssuer{
+		states: map[string]*IssuanceState{
+			"foo.router.test": {
+				Host:        "foo.router.test",
+				Status:      IssuancePending,
+				StartedAtMs: time.Now().Add(-2 * time.Second).UnixMilli(),
+			},
+		},
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Host = "foo.router.test"
+	srv.buildHTTPHandler(srv.publicHandler()).ServeHTTP(rec, req)
+
+	if rec.Code == http.StatusMovedPermanently {
+		t.Fatalf("expected NOT to redirect while cert is pending, got 301 → %s",
+			rec.Result().Header.Get("Location"))
+	}
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 (issuing page), got %d", rec.Code)
+	}
+}
+
+func TestNoRedirectByDefault(t *testing.T) {
+	srv := newServerForTest(t, "router.test", "tok", "foo")
+	// HTTPSRedirect defaults to false. publicHandler should run.
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Host = "foo.router.test"
+	srv.buildHTTPHandler(srv.publicHandler()).ServeHTTP(rec, req)
+
+	// Without a connected client we expect 502 — that proves we got into
+	// publicHandler and out of redirect logic.
+	if rec.Code == http.StatusMovedPermanently {
+		t.Fatalf("did not expect redirect; got 301")
+	}
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502 (no client), got %d", rec.Code)
+	}
 }
 
 // newServerForTest builds a *Server suitable for unit tests of the public

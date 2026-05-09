@@ -47,6 +47,12 @@ type Config struct {
 	AdminUser string
 	AdminPass string
 
+	// HTTPSRedirect — when true, the plain-HTTP listener 301-redirects every
+	// request to its HTTPS counterpart. ACME HTTP-01 challenges and the
+	// "Issuing certificate" page are exempted automatically. No-op unless a
+	// TLS listener is also active (AXR_PUBLIC_TLS_ADDR + a non-off TLS mode).
+	HTTPSRedirect bool
+
 	// TLS settings.
 	TLS TLSConfig
 }
@@ -96,6 +102,7 @@ func LoadConfig() (*Config, error) {
 		TokensFile:     env("AXR_TOKENS_FILE", ""),
 		AdminUser:      env("AXR_ADMIN_USER", ""),
 		AdminPass:      env("AXR_ADMIN_PASS", ""),
+		HTTPSRedirect:  envBool("AXR_HTTPS_REDIRECT", false),
 		TLS: TLSConfig{
 			Mode:              TLSMode(strings.ToLower(env("AXR_TLS_MODE", "off"))),
 			CertFile:          env("AXR_TLS_CERT_FILE", ""),
@@ -147,9 +154,9 @@ func LoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("AXR_TLS_MODE=file requires AXR_TLS_CERT_FILE and AXR_TLS_KEY_FILE")
 		}
 	case TLSAutocert:
-		if len(c.TLS.AutocertDomains) == 0 {
-			return nil, fmt.Errorf("AXR_TLS_MODE=autocert requires AXR_TLS_AUTOCERT_DOMAINS")
-		}
+		// AXR_TLS_AUTOCERT_DOMAINS is optional: dynamic per-service issuance
+		// handles "<service>.<base>" automatically once a client registers.
+		// An empty list is valid and common.
 	case TLSDNS:
 		if c.TLS.DNSProvider == "" {
 			return nil, fmt.Errorf("AXR_TLS_MODE=dns requires AXR_DNS_PROVIDER")

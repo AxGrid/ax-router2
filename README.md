@@ -51,7 +51,8 @@ ax-router2/
 ├── client/               # client-side library (handler-mode + proxy-mode)
 ├── internal/protocol/    # control-channel handshake before yamux
 ├── web/                  # React + Vite + Tailwind dashboard (embedded)
-├── examples/             # handler-mode and proxy-mode example clients
+├── examples/             # handler / proxy / websocket example clients
+├── .claude/skills/       # Claude Code skill for generating clients
 ├── tests/e2e/            # end-to-end tests
 └── Makefile
 ```
@@ -93,6 +94,7 @@ Every setting lives in `.env`. The full list is documented in
 | `AXR_TOKENS_FILE` | JSON `{token:service}`. Hot-reloaded on change or `SIGHUP`. |
 | `AXR_ADMIN_USER` / `AXR_ADMIN_PASS` | Optional basic auth on the dashboard. |
 | `AXR_TLS_MODE` | `off` / `file` / `autocert` / `dns`. |
+| `AXR_HTTPS_REDIRECT` | `true` to 301 plain HTTP → HTTPS (ACME challenges + cert-issuance page are auto-exempted). |
 
 ## Routing
 
@@ -308,9 +310,66 @@ dist/ax-router-linux-amd64-<ver>.tar.gz   binary + README + .env.example
 
 `CGO_ENABLED=0` is set by default, so the binary runs on any glibc/musl
 Linux (Alpine, Debian, RHEL, scratch container, etc.) without runtime
-dependencies. The version string is baked in via `-ldflags="-X
-main.version=$(VERSION)"` (Git describe by default) and is printed by
-`./ax-router -version`.
+dependencies.
+
+### Version + build number
+
+* The semantic version comes from a tracked `VERSION` file (one line, e.g.
+  `0.1.1`). Override on the CLI with `make build VERSION=2.0.0-rc1`.
+* A monotonic build counter lives in `.build-number` (gitignored, local
+  to each machine). Every `make build-*` increments it once per `make`
+  invocation — `make build-all` shares one number across all four targets.
+* The current Git short-SHA is also baked in.
+
+All three are linked into the binary via `-ldflags -X main.…` and printed:
+
+```bash
+$ make version
+ax-router 0.1.1 build #4 (a286211)
+
+$ ./bin/ax-router -version
+ax-router 0.1.1 build 4 (a286211) darwin/arm64
+```
+
+The same line is emitted to stderr at server startup. Release tarballs are
+named `ax-router-<os>-<arch>-<version>-b<build>.tar.gz`.
+
+## Examples
+
+Three runnable examples live under `examples/`:
+
+| Path | Demonstrates |
+|---|---|
+| `examples/handler/` | Minimal handler-mode client wrapping an `http.ServeMux`. |
+| `examples/proxy/` | Proxy-mode client forwarding to a local HTTP server. |
+| `examples/websocket/` | Real WebSocket broadcaster (gorilla/websocket) served simultaneously on a local port and through ax-router2 — the realistic "drop into existing project" pattern. |
+
+Run any of them with:
+
+```bash
+AXR_SERVER=router.example.com:7000 AXR_TOKEN=<token> AXR_SERVICE=<name> \
+  go run ./examples/<dir>
+```
+
+## Claude Code skill
+
+A skill for [Claude Code](https://claude.com/claude-code) ships in
+`.claude/skills/ax-router-client/`. When invoked it asks the user for
+the router address, token, service name, and mode (handler / proxy),
+then writes a fresh client or grafts the wiring into an existing Go
+project (preserving any local listener that's already running).
+
+Ways to invoke:
+
+```text
+> /skill ax-router-client
+> "wire up an ax-router2 client for this service"
+> "expose this through router.mycompany.com"
+```
+
+The skill is project-local: clone the repo and Claude Code picks it up
+automatically. To install it globally, copy the directory to
+`~/.claude/skills/ax-router-client/`.
 
 ## Tests
 
