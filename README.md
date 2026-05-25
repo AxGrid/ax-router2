@@ -51,6 +51,7 @@ IP — one TCP connection per service, multiplexed via yamux.
 ```
 ax-router2/
 ├── cmd/ax-router/        # server binary main
+├── tools/axr/            # axr CLI — proxy mode as a standalone binary
 ├── server/               # server-side library (router, admin, TLS, stats)
 ├── client/               # client-side library (handler-mode + proxy-mode)
 ├── internal/protocol/    # control-channel handshake before yamux
@@ -181,6 +182,71 @@ _ = c.Run(ctx)
 
 This is the right choice when your local service is already listening on a
 real socket and you want zero application changes.
+
+## `axr` CLI
+
+`axr` is proxy mode packaged as a standalone binary — no Go code, no
+recompile. Point it at a local port and it registers with the router and
+forwards traffic, the same way `ngrok`/`frpc` would, but outbound to your
+own ax-router server.
+
+```bash
+make build-axr            # → bin/axr (host platform)
+make build-axr-all        # → bin/axr-linux-{amd64,arm64}, bin/axr-darwin-{amd64,arm64}
+```
+
+`make all` also builds the host `axr` alongside the server.
+
+### Usage
+
+```text
+axr [flags] <target>
+```
+
+`<target>` is one of:
+
+| Form | Expands to |
+|---|---|
+| `8080` | `http://localhost:8080` |
+| `localhost:9000` | `http://localhost:9000` |
+| `http://localhost:8080` | (used as-is) |
+| `ws://localhost:8080` | (used as-is) |
+
+Flags (each also reads an `AXR_…` env var):
+
+| Flag | Env | Purpose |
+|---|---|---|
+| `-server` | `AXR_SERVER` | Router control address `host:port` (default `localhost:7000`). |
+| `-token` | `AXR_TOKEN` | Auth token. Required. |
+| `-service` | `AXR_SERVICE` | Desired service name. Required for wildcard (`*`) tokens; ignored for service-bound tokens. |
+| `-host-rewrite` | — | Rewrite `Host:` to the target's host. Default keeps the public Host so the app sees its real name. |
+| `-env` | — | Load a `.env` file before reading env vars. |
+| `-version` | — | Print version and exit. |
+
+### Examples
+
+```bash
+# Expose a local Vite dev server as service "styler".
+axr -server=r.axgrid.com:7000 -token=<token> -service=styler -host-rewrite 5173
+
+# Same via env vars.
+AXR_SERVER=r.axgrid.com:7000 AXR_TOKEN=<token> AXR_SERVICE=styler \
+  axr -host-rewrite 5173
+
+# A backend already listening on :9000.
+axr -token=<token> -service=api localhost:9000
+
+# A WebSocket service.
+axr -token=<token> -service=ws ws://localhost:8080
+```
+
+> **`-host-rewrite` and dev servers:** Vite (and some other dev servers)
+> reject requests whose `Host:` isn't in an allow-list, so a request for
+> `styler.r.axgrid.com` gets a 403. Either pass `-host-rewrite` (the app
+> then sees `Host: localhost:5173`) or add the public host to the dev
+> server's allow-list (e.g. `server.allowedHosts` in `vite.config.js`).
+> Service-bound tokens don't need `-service`; the server ignores it and the
+> startup log shows `service=(token-bound)`.
 
 ## Dashboard
 

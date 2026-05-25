@@ -1,5 +1,8 @@
 .PHONY: all build build-host build-linux build-linux-amd64 build-linux-arm64 \
         build-darwin build-darwin-amd64 build-darwin-arm64 build-all \
+        build-axr build-axr-host build-axr-linux build-axr-linux-amd64 \
+        build-axr-linux-arm64 build-axr-darwin build-axr-darwin-amd64 \
+        build-axr-darwin-arm64 build-axr-all \
         release web web-deps test clean run lint bump version
 
 # Override these if your toolchain isn't on PATH.
@@ -44,8 +47,16 @@ GOBUILD = $(GOENV) $(GO) build $(GOFLAGS_BUILD)
 #   bin/ax-router-darwin-amd64
 #   bin/ax-router-darwin-arm64
 PKG := ./cmd/ax-router
+AXR_PKG := ./tools/axr
 
-all: web build
+# Same LDFLAGS for axr — version/build/commit baked in.
+AXR_LDFLAGS = -s -w \
+              -X main.version=$(VERSION) \
+              -X main.build=$$(cat $(BUILD_FILE) 2>/dev/null || echo 0) \
+              -X main.commit=$(COMMIT)
+AXR_GOBUILD = $(GOENV) $(GO) build -trimpath -ldflags="$(AXR_LDFLAGS)"
+
+all: web build build-axr-host
 
 # bump increments BUILD_FILE by one and prints the new triple. Make memoises
 # prerequisites within a single invocation, so all build-* targets reachable
@@ -91,6 +102,31 @@ build-darwin-arm64: web bump
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) -o bin/ax-router-darwin-arm64 $(PKG)
 
 build-all: build-linux build-darwin
+
+# ----- axr CLI tool: same matrix, no web/ dependency -----
+
+build-axr: build-axr-host
+
+build-axr-host: bump
+	$(AXR_GOBUILD) -o bin/axr $(AXR_PKG)
+
+build-axr-linux: build-axr-linux-amd64 build-axr-linux-arm64
+
+build-axr-linux-amd64: bump
+	GOOS=linux GOARCH=amd64 $(AXR_GOBUILD) -o bin/axr-linux-amd64 $(AXR_PKG)
+
+build-axr-linux-arm64: bump
+	GOOS=linux GOARCH=arm64 $(AXR_GOBUILD) -o bin/axr-linux-arm64 $(AXR_PKG)
+
+build-axr-darwin: build-axr-darwin-amd64 build-axr-darwin-arm64
+
+build-axr-darwin-amd64: bump
+	GOOS=darwin GOARCH=amd64 $(AXR_GOBUILD) -o bin/axr-darwin-amd64 $(AXR_PKG)
+
+build-axr-darwin-arm64: bump
+	GOOS=darwin GOARCH=arm64 $(AXR_GOBUILD) -o bin/axr-darwin-arm64 $(AXR_PKG)
+
+build-axr-all: build-axr-linux build-axr-darwin
 
 # release: produce gzipped tarballs in dist/ alongside .env.example and README.
 #
