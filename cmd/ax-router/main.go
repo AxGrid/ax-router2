@@ -47,8 +47,18 @@ func main() {
 	}
 
 	if _, err := os.Stat(*envFile); err == nil {
+		// A malformed .env must not take the whole service into supervisor's
+		// FATAL state, so we don't os.Exit here — the ambient environment
+		// (e.g. supervisor's `environment=`) may already carry the config, and
+		// LoadConfig below fails cleanly if a required value is truly missing.
+		//
+		// We deliberately do NOT print the godotenv error: on a parse failure
+		// it echoes the offending line, which for this file is the
+		// secret-bearing AXR_TOKENS map. Emit a clean, actionable hint instead.
 		if err := godotenv.Load(*envFile); err != nil {
-			log.Fatalf("load %s: %v", *envFile, err)
+			log.Printf("WARNING: %s is malformed and was not loaded "+
+				"(it must be plain KEY=value lines, not a quoted/escaped blob); "+
+				"falling back to the ambient environment", *envFile)
 		}
 	}
 
