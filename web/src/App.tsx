@@ -146,10 +146,136 @@ export default function App() {
         </div>
       )}
 
+      <TokensPanel />
+
       <footer className="mt-12 text-center font-mono text-[11px] tracking-wider text-fg-muted">
         ax-router2 · github.com/axgrid/ax-router2
       </footer>
     </div>
+  );
+}
+
+type TokenInfo = { service: string; token: string; wildcard: boolean };
+
+function maskToken(t: string): string {
+  if (!t) return '';
+  if (t.length <= 4) return '•'.repeat(t.length);
+  return '•'.repeat(Math.min(t.length - 4, 8)) + t.slice(-4);
+}
+
+// TokensPanel lazily fetches /__router/api/tokens (admin-auth only) and shows
+// each token masked, with per-row reveal and copy-to-clipboard of the full
+// value. If admin auth isn't configured the endpoint returns 403 and we show a
+// hint instead of any tokens.
+function TokensPanel() {
+  const [open, setOpen] = useState(false);
+  const [tokens, setTokens] = useState<TokenInfo[] | null>(null);
+  const [err, setErr] = useState('');
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+  const [copied, setCopied] = useState('');
+
+  const load = async () => {
+    setErr('');
+    setTokens(null);
+    try {
+      const r = await fetch('/__router/api/tokens', { cache: 'no-store' });
+      if (r.status === 403) {
+        setErr('Token viewer requires admin auth (AXR_ADMIN_USER / AXR_ADMIN_PASS).');
+        setTokens([]);
+        return;
+      }
+      if (!r.ok) {
+        setErr(`Failed to load tokens (${r.status}).`);
+        setTokens([]);
+        return;
+      }
+      setTokens((await r.json()) as TokenInfo[]);
+    } catch {
+      setErr('Failed to load tokens.');
+      setTokens([]);
+    }
+  };
+
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && tokens === null) load();
+  };
+
+  const copy = async (tok: string) => {
+    try {
+      await navigator.clipboard.writeText(tok);
+      setCopied(tok);
+      setTimeout(() => setCopied((c) => (c === tok ? '' : c)), 1500);
+    } catch {
+      /* clipboard unavailable (insecure context) */
+    }
+  };
+
+  return (
+    <section className="mt-10">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="stat-label">Tokens</h2>
+        <button
+          onClick={toggle}
+          className="rounded-lg border bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-fg-muted transition hover:text-brand-700"
+        >
+          {open ? 'Hide tokens' : 'Show tokens'}
+        </button>
+      </div>
+
+      {open && (
+        <div className="card overflow-hidden p-0">
+          {err ? (
+            <p className="p-4 text-sm text-fg-muted">{err}</p>
+          ) : tokens === null ? (
+            <p className="p-4 font-mono text-sm text-fg-muted">loading…</p>
+          ) : tokens.length === 0 ? (
+            <p className="p-4 text-sm text-fg-muted">No tokens configured.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="stat-label px-4 py-2.5 font-normal">Service</th>
+                  <th className="stat-label px-4 py-2.5 font-normal">Token</th>
+                  <th className="stat-label px-4 py-2.5 text-right font-normal">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tokens.map((t) => (
+                  <tr key={t.token} className="border-b last:border-0">
+                    <td className="px-4 py-2.5 font-mono text-brand-800">
+                      {t.wildcard ? 'any (*)' : t.service}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <code className="rounded bg-surface-2 px-2 py-1 font-mono text-xs text-brand-700">
+                        {revealed[t.token] ? t.token : maskToken(t.token)}
+                      </code>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setRevealed((m) => ({ ...m, [t.token]: !m[t.token] }))}
+                          className="rounded-md border px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-fg-muted transition hover:text-fg"
+                        >
+                          {revealed[t.token] ? 'Hide' : 'Reveal'}
+                        </button>
+                        <button
+                          onClick={() => copy(t.token)}
+                          className="rounded-md border px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-fg-muted transition hover:text-brand-700"
+                        >
+                          {copied === t.token ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

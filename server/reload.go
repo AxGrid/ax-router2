@@ -64,6 +64,22 @@ func (s *tokenStore) Snapshot() (count int, lastReload time.Time, lastErr string
 	return len(s.inline) + len(s.file), s.lastReload, s.lastErr
 }
 
+// All returns a snapshot copy of every known token→service mapping (inline
+// plus file). Returned under the read-lock, so it's safe to call from an HTTP
+// handler concurrently with reloads.
+func (s *tokenStore) All() map[string]string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make(map[string]string, len(s.inline)+len(s.file))
+	for k, v := range s.inline {
+		out[k] = v
+	}
+	for k, v := range s.file {
+		out[k] = v
+	}
+	return out
+}
+
 func (s *tokenStore) reload() error {
 	if s.path == "" {
 		return nil

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -64,6 +65,8 @@ func (a *adminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/__router/api/state":
 		a.serveState(w, r)
+	case r.URL.Path == "/__router/api/tokens":
+		a.serveTokens(w, r)
 	case r.URL.Path == "/__router/ws":
 		a.serveWS(w, r)
 	default:
@@ -76,6 +79,38 @@ func (a *adminHandler) serveStatic(w http.ResponseWriter, r *http.Request) {
 	// http.FileServer already serves index.html automatically for "/", and
 	// returns 404 for anything else not in dist/.
 	a.staticFS.ServeHTTP(w, r)
+}
+
+// serveTokens lists the configured token→service mappings for the dashboard's
+// token viewer. ServeHTTP already ran requireAuth; we ADDITIONALLY refuse to
+// serve when no admin credentials are configured, since requireAuth is a no-op
+// in that case and the dashboard would be public — tokens must never leak to an
+// unauthenticated caller. The full token is returned so the UI can offer
+// copy-to-clipboard; the UI masks it for display.
+func (a *adminHandler) serveTokens(w http.ResponseWriter, r *http.Request) {
+	if a.cfg.AdminUser == "" || a.cfg.AdminPass == "" {
+		http.Error(w, "token viewer requires AXR_ADMIN_USER and AXR_ADMIN_PASS", http.StatusForbidden)
+		return
+	}
+	type entry struct {
+		Service  string `json:"service"`
+		Token    string `json:"token"`
+		Wildcard bool   `json:"wildcard"`
+	}
+	m := a.tokens.All()
+	out := make([]entry, 0, len(m))
+	for tok, svc := range m {
+		out = append(out, entry{Service: svc, Token: tok, Wildcard: svc == "*"})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Service != out[j].Service {
+			return out[i].Service < out[j].Service
+		}
+		return out[i].Token < out[j].Token
+	})
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	_ = json.NewEncoder(w).Encode(out)
 }
 
 // State is the full dashboard snapshot.
